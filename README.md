@@ -1,4 +1,4 @@
-# CLICKR
+# CLICKER5000
 
 > ASCII auto-clicker for Windows. One file. Zero scaffold. The UI **is** the character grid.
 
