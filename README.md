@@ -1,4 +1,4 @@
-# CLICKER5000
+# CLICKR
 
 > ASCII auto-clicker for Windows. One file. Zero scaffold. The UI **is** the character grid.
 
@@ -16,21 +16,14 @@ not a widget skin approximating it.
 
 ## Quick Start
 
-```ps1
-# Install uv
+> Install uv package manager
+
+```bash
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-# Create venv with uv
-uv venv
-# Activate the enviorment
-.venv\Scripts\activate
-# Install Dependencies
-uv add pynput
-# (optional) uv add --dev types-pynput
 ```
 
-> RUN CLICKER 5000
-```ps1
-uv run main.py
+```bash
+uv run clickr.py
 ```
 
 That's it. Dependencies are declared inline via **PEP 723** script metadata —
@@ -59,21 +52,34 @@ uv run clickr.py
 
 ## Controls
 
-| Element                | Action                                                                                   |
-|------------------------|------------------------------------------------------------------------------------------|
-| `[Speed]`              | Opens the click-delay panel (drop-down slider + numeric)                                 |
-| `[  50]`               | **Click to type** an exact ms value · `ENTER` commit · `ESC` cancel · click-away commits |
-| `░▒░`                  | Slider thumb — drag left/right; numeric readout is live-exact                            |
-| `[Hotkey]`             | Opens the binding panel                                                                  |
-| `> press key/btn <`    | Click, then hit any keyboard key or mouse button to bind · `ESC` cancels                 |
-| `[status]` / `OFF:[○]` | Click to toggle the clicker · `ON: [●]` renders green                                    |
-| `[-]`                  | Minimize to taskbar                                                                      |
-| `[x]`                  | Exit                                                                                     |
-| *(frame)*              | Drag any non-interactive cell to move the window                                         |
+| Element                | Action                                                                                                   |
+|------------------------|----------------------------------------------------------------------------------------------------------|
+| `[Speed]`              | Opens the click-delay panel (drop-down slider + numeric)                                                 |
+| `[  50]`               | **Click to type** an exact ms value · `ENTER` commit · `ESC` cancel · click-away commits                 |
+| `░▒░`                  | Slider thumb — drag left/right; numeric readout is live-exact                                            |
+| `[○] TOGGLE CLICK`     | Mode switch — ON: the hotkey **holds M1 down**; press again releases. Slider + numeric grey out and lock |
+| `[Hotkey]`             | Opens the binding panel                                                                                  |
+| `> press key/btn <`    | Click, then hit any keyboard key or mouse button to bind · `ESC` cancels                                 |
+| `[status]` / `OFF:[○]` | Click to toggle the clicker · `ON: [●]` renders green                                                    |
+| `[-]`                  | Minimize to taskbar                                                                                      |
+| `[x]`                  | Exit                                                                                                     |
+| *(frame)*              | Drag any non-interactive cell to move the window                                                         |
 
-**Hotkey is global** — toggles the clicker whether or not the window has focus.
-Default binding: `MOUSE5` (`Button.x2`). Left mouse is reserved (it's the button
-being clicked) and cannot be bound.
+**Hotkey is global** — fires whether or not the window has focus. Default
+binding: `MOUSE5` (`Button.x2`). Left mouse is reserved (it's the button being
+driven) and cannot be bound.
+
+**One hotkey, two functions.** `TOGGLE CLICK` decides what it drives:
+
+```plaintext
+[○] TOGGLE CLICK  ->  hotkey toggles the rapid-click loop (speed slider live)
+[●] TOGGLE CLICK  ->  hotkey press = HOLD M1 · press again = RELEASE
+                      (slider + numeric greyed + locked — delay is irrelevant)
+```
+
+Some situations need fast clicking, some need M1 pinned down for a long time —
+same button covers both. Switching modes always resets to a safe state: the
+click loop stops and any held M1 is released (also released on exit).
 
 Hover any element for a tooltip. Tips extend from the **right edge** of the app
 on a transparent layer with a hard-offset retro drop shadow — zero UI occlusion.
@@ -116,7 +122,7 @@ TIPS                 = {...}         # tooltip copy per element
 
 Single file, four moving parts:
 
-```plaintext
+```
 clicker thread ──▶ pynput MouseController · left-click loop @ interval_ms
 global hooks   ──▶ pynput listeners · hotkey toggle + capture mode (any focus)
 grid renderer  ──▶ build() emits colored segment rows + (row, c0, c1, action)
@@ -162,6 +168,13 @@ which shells out to pip behind uv's back.
 ---
 
 ## Changelog
+
+### v1.2
+
+- **TOGGLE CLICK** — `[○] TOGGLE CLICK` row in the Speed panel. ON: the single
+  hotkey holds M1 (press again = release) instead of driving the click loop;
+  slider + numeric grey out and lock. One hotkey, two functions
+- Safe-state guarantees: mode switch / exit always release a held M1
 
 ### v1.1
 
