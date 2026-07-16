@@ -1,0 +1,14 @@
+[project]
+name = "clicker5000"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pynput>=1.8.2",
+]
+
+[dependency-groups]
+dev = [
+    "types-pynput>=1.8.1.20260712",
+]
