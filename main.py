@@ -3,14 +3,20 @@
 # dependencies = ["pynput"]
 # ///
 """
-CLICKR — ASCII auto-clicker for Windows                          v1.1
+CLICKR — ASCII auto-clicker for Windows                          v1.2
 =====================================================================
-run:   uv run clickr.py          (PEP 723 inline deps, zero scaffold)
+run:   uv run main.py          (PEP 723 inline deps, zero scaffold)
 exe:   pyinstaller --onefile --noconsole clickr.py
 
   ┌─────────┬──────────┬──────────────────┬──────────┐
   │ [Speed] │ [Hotkey] │ [status] OFF:[○] │ [-]  [x] │
   └─────────┴──────────┴──────────────────┴──────────┘
+
+v1.2:
+[4] TOGGLE CLICK — "[○] TOGGLE CLICK" row inside the Speed panel.
+    ON: the (single) hotkey HOLDS M1 down; pressing it again
+    RELEASES. Slider + numeric grey out and LOCK while active.
+    One hotkey, two functions — rapid-click OR long-hold.
 
 v1.1 QOL:
 [1] TOOLTIPS  — every interactive element. All tips extend from the
@@ -62,6 +68,7 @@ TIPS = {
     "setkey": "press any key / mouse btn",
     "slider": "drag ░▒░ to adjust speed",
     "msfield": "click + type exact ms",
+    "holdtoggle": "hotkey holds M1 / press again = release",
 }
 
 # ----------------------------- state ------------------------------
@@ -77,6 +84,8 @@ class State:
     hotkey_open  = False
     editing      = False          # typing directly into the ms readout
     buf          = ""             # edit buffer
+    hold_mode    = False          # TOGGLE CLICK: hotkey holds M1 instead
+    holding      = False          # M1 currently held down
 
 S = State()
 mouse_ctl = MouseController()
@@ -116,7 +125,15 @@ threading.Thread(target=click_loop, daemon=True).start()
 # ----------------------- global input hooks -----------------------
 
 def _toggle():
-    S.running = not S.running
+    """The one hotkey, two functions: mode decides what it drives."""
+    if S.hold_mode:                     # TOGGLE CLICK: press = hold M1,
+        S.holding = not S.holding      # press again = release
+        if S.holding:
+            mouse_ctl.press(Button.left)
+        else:
+            mouse_ctl.release(Button.left)
+    else:                               # rapid-click loop
+        S.running = not S.running
     mark()
 
 def on_global_click(x, y, btn, pressed):
@@ -239,7 +256,7 @@ def build():
     lines = []
     r = 0
 
-    run = S.running
+    run = S.running or S.holding
     dot = f"ON: [{ON_DOT}]" if run else f"OFF:[{OFF_DOT}]"   # both 7 chars
 
     # ---- main bar ----
@@ -260,8 +277,9 @@ def build():
     lines.append(L); r += 1
     lines.append(Line(r).add("└─────────┴──────────┴──────────────────┴──────────┘", DIM)); r += 1
 
-    # ---- [Speed] drop-down: editable numeric + draggable slider ----
+    # ---- [Speed] drop-down: editable numeric + slider + TOGGLE CLICK ----
     if S.speed_open:
+        locked = S.hold_mode               # TOGGLE ON => slider greys + locks
         frac = (S.interval_ms - MIN_MS) / (MAX_MS - MIN_MS)
         pos  = round(frac * (TRACK - len(THUMB)))
         bar_l, bar_r = "█" * pos, "█" * (TRACK - len(THUMB) - pos)
@@ -270,18 +288,28 @@ def build():
         lines.append(Line(r).add("┌" + "─" * (inner - 2) + "┐", DIM)); r += 1
         L = Line(r)
         L.add("│ ", DIM)
-        if S.editing:                          # type-in mode, block cursor
+        if S.editing and not locked:           # type-in mode, block cursor
             disp = (S.buf + "▌").ljust(4)[:4]
             L.add("[", AMB, action="msfield")
             L.add(disp, AMB, action="msfield")
             L.add("]", AMB, action="msfield")
         else:                                  # live exact numeric (ms)
-            L.add(f"[{S.interval_ms:>4}]", GRN, action="msfield")
+            L.add(f"[{S.interval_ms:>4}]",
+                  DIM if locked else GRN,
+                  action=None if locked else "msfield")
         L.add(" ", DIM)
         _slider["row"], _slider["c0"] = r, L.col
-        L.add(bar_l, FG, action="slider")
-        L.add(THUMB, AMB, action="slider")
-        L.add(bar_r, FG, action="slider")
+        L.add(bar_l, DIM if locked else FG,  action=None if locked else "slider")
+        L.add(THUMB, DIM if locked else AMB, action=None if locked else "slider")
+        L.add(bar_r, DIM if locked else FG,  action=None if locked else "slider")
+        L.add(" │", DIM)
+        lines.append(L); r += 1
+        # [○] TOGGLE CLICK — hotkey holds M1 instead of rapid-clicking
+        tdot = ON_DOT if S.hold_mode else OFF_DOT
+        L = Line(r)
+        L.add("│ ", DIM)
+        L.add(f"[{tdot}] TOGGLE CLICK".ljust(inner - 4),
+              GRN if S.hold_mode else FG, action="holdtoggle")
         L.add(" │", DIM)
         lines.append(L); r += 1
         lines.append(Line(r).add("└" + "─" * (inner - 2) + "┘", DIM)); r += 1
@@ -350,6 +378,8 @@ def do_min():
     root.iconify()
 
 def do_close():
+    if S.holding:                      # never exit with M1 stuck down
+        mouse_ctl.release(Button.left)
     mouse_listener.stop()
     key_listener.stop()
     root.destroy()
@@ -358,7 +388,18 @@ def do_setkey():
     S.capturing = True
     build()
 
+def do_holdtoggle():
+    commit_edit()
+    S.hold_mode = not S.hold_mode
+    S.running = False                  # switching modes kills any active
+    if S.holding:                      # output — never strand a held M1
+        mouse_ctl.release(Button.left)
+        S.holding = False
+    build()
+
 def do_msfield():
+    if S.hold_mode:                    # slider/numeric locked in hold mode
+        return
     if not S.editing:                  # [3] click numeric -> type exact ms
         S.editing, S.buf = True, ""
         root.focus_force()
@@ -366,7 +407,7 @@ def do_msfield():
 
 ACTIONS = {"speed": do_speed, "hotkey": do_hotkey, "status": do_status,
            "min": do_min, "close": do_close, "setkey": do_setkey,
-           "msfield": do_msfield}
+           "msfield": do_msfield, "holdtoggle": do_holdtoggle}
 
 def _hit(row, col):
     for r, c0, c1, action in _regions:
