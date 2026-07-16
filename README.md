@@ -16,8 +16,21 @@ not a widget skin approximating it.
 
 ## Quick Start
 
-```bash
-uv run clickr.py
+```ps1
+# Install uv
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+# Create venv with uv
+uv venv
+# Activate the enviorment
+.venv\Scripts\activate
+# Install Dependencies
+uv add pynput
+# (optional) uv add --dev types-pynput
+```
+
+> RUN CLICKER 5000
+```ps1
+uv run main.py
 ```
 
 That's it. Dependencies are declared inline via **PEP 723** script metadata —
