@@ -1,6 +1,6 @@
 # CLICKR
 
-> ASCII auto-clicker for Windows. One file. Zero scaffold. The UI **is** the character grid.
+> ASCII auto-clicker for Windows. Character Grid based UI
 
 ```plaintext
 ┌─────────┬──────────┬──────────────────┬──────────┐
