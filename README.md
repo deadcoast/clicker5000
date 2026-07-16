@@ -1,6 +1,6 @@
-# CLICKR
+# CLICKER5000
 
-> ASCII auto-clicker for Windows. Character Grid based UI
+> ASCII auto-clicker for Windows with Character-Grid ASCII based UI
 
 ```plaintext
 ┌─────────┬──────────┬──────────────────┬──────────┐
